@@ -1,0 +1,10 @@
+{
+  "items": [
+    { "id": "Sonoff SNZB-04", "status": "Tervezett", "qty": 1, "room": "Konyha" },
+    { "id": "Sonoff SNZB-02P", "status": "Tervezett", "qty": 1, "room": "Hálószoba" },
+    { "id": "Sonoff NSPanel Pro", "status": "Tervezett", "qty": 1, "room": "Nappali" },
+    { "id": "Okos dugalj", "status": "Megvásárolt", "qty": 1, "room": "Dolgozószoba" },
+    { "id": "Okos LED izzó", "status": "Telepítve", "qty": 3, "room": "Nappali" },
+    { "id": "Mozgásérzékelő", "status": "Telepítve", "qty": 2, "room": "Előszoba" }
+  ]
+}

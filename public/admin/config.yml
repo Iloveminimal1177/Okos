@@ -1,0 +1,35 @@
+backend:
+  name: git-gateway
+  branch: main
+
+media_folder: "public/images"
+public_folder: "/images"
+
+collections:
+  - name: "terv"
+    label: "Ügyfél Terve"
+    files:
+      - file: "tasty-trappist/devices.json"
+        label: "Eszköz Lista"
+        name: "devices"
+        fields:
+          - label: "Eszközök"
+            name: "items"
+            widget: "list"
+            fields:
+              - label: "Eszköz kiválasztása"
+                name: "id"
+                widget: "select"
+                options: ["Sonoff SNZB-04", "Sonoff SNZB-02P", "Sonoff SNZB-02D", "Sonoff NSPanel Pro", "Okos dugalj", "Okos LED izzó", "Mozgásérzékelő"]
+              - label: "Helyiség"
+                name: "room"
+                widget: "select"
+                options: ["Nappali", "Konyha", "Hálószoba", "Előszoba", "Fürdőszoba"]
+              - label: "Mennyiség"
+                name: "qty"
+                widget: "number"
+                default: 1
+              - label: "Állapot"
+                name: "status"
+                widget: "select"
+                options: ["Tervezett", "Megvásárolt", "Telepítve"]

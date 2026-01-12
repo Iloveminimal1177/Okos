@@ -1,0 +1,8 @@
+{
+  "Sonoff SNZB-04": { "category": "Biztonság", "protocol": "Zigbee", "price": 2990, "desc": "Ajtó/ablak nyitás érzékelő, elemes, kompakt méret" },
+  "Sonoff SNZB-02P": { "category": "Szenzor", "protocol": "Zigbee", "price": 4290, "desc": "Hőmérséklet és páratartalom szenzor, nagyobb pontosság" },
+  "Sonoff NSPanel Pro": { "category": "Központ", "protocol": "Zigbee", "price": 28990, "desc": "Okos fali panel érintőkijelzővel, Zigbee gateway" },
+  "Okos dugalj": { "category": "Energia", "protocol": "Wi-Fi", "price": 5490, "desc": "Energiamérési funkció, max. 16A terhelés" },
+  "Okos LED izzó": { "category": "Világítás", "protocol": "Zigbee", "price": 12990, "desc": "Philips Hue White & Color, RGB támogatás" },
+  "Mozgásérzékelő": { "category": "Biztonság", "protocol": "Zigbee", "price": 6990, "desc": "Aqara Motion Sensor, mozgás és fényerő" }
+}

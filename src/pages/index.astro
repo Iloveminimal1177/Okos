@@ -1,0 +1,63 @@
+---
+import devicesData from '../../devices.json';
+import katalogus from '../../katalogus.json';
+
+const devices = Array.isArray(devicesData) ? devicesData : (devicesData.items || []);
+
+const getStatusClass = (status) => {
+  if (!status) return 'default';
+  return status.toLowerCase().replace(/á/g, 'a').replace(/é/g, 'e').replace(/ /g, '-');
+};
+---
+
+<html lang="hu">
+<head>
+    <meta charset="utf-8" />
+    <title>Okosotthon Tervezés</title>
+    <style>
+        body { background: #191919; color: #ffffff; font-family: sans-serif; padding: 2rem; }
+        table { width: 100%; border-collapse: collapse; background: #202020; border-radius: 8px; overflow: hidden; }
+        th { background: #252525; color: #888; font-size: 0.75rem; text-transform: uppercase; padding: 12px; text-align: left; }
+        td { padding: 14px 12px; border-bottom: 1px solid #2d2d2d; font-size: 0.85rem; }
+        .room-tag { background: #37352f; color: #efefef; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; }
+        .zigbee { background: #d9730d; color: #fff; }
+        .wifi { background: #0b6e99; color: #fff; }
+        .status { padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; }
+        .status-tervezett { background: #492f5b; color: #d192e8; }
+        .status-megvasarolt { background: #564328; color: #e9a23b; }
+        .status-telepitve { background: #2b593f; color: #85e085; }
+        .price { font-weight: bold; color: #2ecc71; }
+    </style>
+</head>
+<body>
+    <h1>🏠 Tervezett eszközök: {devices.length} db</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Helyiség</th>
+                <th>Eszköz neve</th>
+                <th>Protokoll</th>
+                <th>Mennyiség</th>
+                <th>Összesen</th>
+                <th>Állapot</th>
+            </tr>
+        </thead>
+        <tbody>
+            {devices.map((item) => {
+                const info = katalogus[item.id] || {};
+                return (
+                    <tr>
+                        <td><span class="room-tag">{item.room}</span></td>
+                        <td><strong>{item.id}</strong><br/><small style="color:#888">{info.desc}</small></td>
+                        <td><span class={`badge ${info.protocol?.toLowerCase()}`}>{info.protocol}</span></td>
+                        <td>{item.qty} db</td>
+                        <td class="price">{(item.qty * (info.price || 0)).toLocaleString()} Ft</td>
+                        <td><span class={`status status-${getStatusClass(item.status)}`}>{item.status}</span></td>
+                    </tr>
+                );
+            })}
+        </tbody>
+    </table>
+</body>
+</html>
