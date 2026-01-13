@@ -1,118 +1,208 @@
 ---
 import katalogusData from '../../katalogus.json';
-const katalogus = katalogusData;
+const katalogus = katalogusData || {};
 ---
 
 <html lang="hu">
 <head>
     <meta charset="utf-8" />
-    <title>Smart Home Planner Pro</title>
-    <style>
-        body { background: #121212; color: #e0e0e0; font-family: sans-serif; padding: 20px; }
-        .controls { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; }
-        select, input, button { background: #2d2d2d; color: white; border: 1px solid #444; padding: 10px; border-radius: 4px; margin: 5px; }
-        button { background: #2ecc71; color: black; font-weight: bold; cursor: pointer; border: none; }
-        button:hover { opacity: 0.8; }
-        button.save { background: #3498db; }
-        button.load { background: #f1c40f; }
-        button.delete { background: #e74c3c; color: white; padding: 5px 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; border: 1px solid #333; text-align: left; }
-        th { background: #252525; color: #2ecc71; }
-        .total { font-size: 1.5rem; color: #2ecc71; text-align: right; margin-top: 20px; font-weight: bold; }
+    <title>Okosotthon Tervező</title>
+    <style is:global>
+        body { 
+            background-color: #191919; 
+            color: #ffffff; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            padding: 40px; 
+            margin: 0; 
+        }
+
+        h1 { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            border-bottom: 1px solid #2f2f2f; 
+            padding-bottom: 20px; 
+            margin-bottom: 30px; 
+        }
+
+        .controls {
+            background-color: #202020;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            border: 1px solid #2d2d2d;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        input, select {
+            background-color: #2a2a2a;
+            border: 1px solid #3d3d3d;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-green { background-color: #27ae60; color: white; }
+        .btn-blue { background-color: #2980b9; color: white; }
+        .btn-yellow { background-color: #f1c40f; color: #2c2c2c; }
+        .btn-del {
+            background-color: rgba(255, 71, 87, 0.1);
+            color: #ff6b81;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+        th { padding: 10px 20px; font-size: 0.75rem; color: #888; }
+
+        tbody tr { background-color: #202020; }
+        td { padding: 16px 20px; color: #ddd; }
+
+        .tag-room { background:#333; padding:6px 12px; border-radius:6px; }
+        .badge-protocol { padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.75rem; }
+        .zigbee { background:#e67e22; color:#fff; }
+        .wifi { background:#2980b9; color:#fff; }
+        .bluetooth { background:#2c3e50; color:#fff; }
+        .egyeb { background:#555; color:#ccc; }
+
+        .badge-status { padding:6px 14px; border-radius:20px; font-size:0.75rem; }
+        .status-tervezett { background:#3e2a4f; color:#d8b4fe; }
+
+        .price { color:#2ecc71; font-weight:bold; font-family:monospace; }
+        #grandTotal { font-size:1.2rem; color:#2ecc71; }
     </style>
 </head>
+
 <body>
-    <h1>🏠 Okosotthon Tervező</h1>
+<h1>🏠 Okosotthon Tervező</h1>
 
-    <div class="controls">
-        <strong>Ügyfél neve:</strong> 
-        <input type="text" id="clientName" placeholder="Pl: Kovács János" />
-        <button class="save" onclick="saveProject()">💾 Mentés</button>
-        <button class="load" onclick="loadProject()">📂 Betöltés</button>
-        <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
-        
-        <strong>Eszköz hozzáadása:</strong>
-        <select id="deviceSelect">
-            <option value="">-- Válassz eszközt --</option>
-            {Object.keys(katalogus).map(id => <option value={id}>{id} ({katalogus[id].price} Ft)</option>)}
-        </select>
-        <input type="text" id="roomInput" placeholder="Helyiség (pl: Nappali)" />
-        <input type="number" id="qtyInput" value="1" style="width: 60px;" />
-        <button onclick="addDevice()">➕ Hozzáad</button>
+<div class="controls">
+    <input type="text" id="clientName" placeholder="Ügyfél neve..." />
+    <button class="btn-blue" onclick="saveProject()">💾 Mentés</button>
+    <button class="btn-yellow" onclick="openLoadPopup()">📂 Betöltés</button>
+
+    <div style="flex-grow:1"></div>
+
+    <select id="deviceSelect">
+        <option value="">-- Válassz eszközt --</option>
+        {Object.keys(katalogus).map(id => <option value={id}>{id}</option>)}
+    </select>
+
+    <input type="text" id="roomInput" placeholder="Helyiség" />
+    <input type="number" id="qtyInput" value="1" min="1" style="width:60px;" />
+    <button class="btn-green" onclick="addDevice()">➕ Hozzáad</button>
+</div>
+
+<table>
+<thead>
+<tr>
+    <th>Helyiség</th>
+    <th>Eszköz</th>
+    <th>Protokoll</th>
+    <th>Db</th>
+    <th>Összesen</th>
+    <th>Állapot</th>
+    <th></th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+<tfoot>
+<tr>
+    <td colspan="4" style="text-align:right">Végösszeg:</td>
+    <td id="grandTotal">0 Ft</td>
+</tr>
+</tfoot>
+</table>
+
+<!-- LOAD POPUP -->
+<div id="loadPopup" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:999; align-items:center; justify-content:center;">
+    <div style="background:#202020; padding:20px; border-radius:12px; min-width:300px;">
+        <h3>📂 Mentett ügyfelek</h3>
+        <div id="projectList"></div>
+        <div style="text-align:right; margin-top:15px;">
+            <button class="btn-del" onclick="closeLoadPopup()">Bezár</button>
+        </div>
     </div>
+</div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Helyiség</th>
-                <th>Eszköz</th>
-                <th>Egységár</th>
-                <th>db</th>
-                <th>Összesen</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+<script define:vars={{ katalogus }}>
+let currentProject = [];
 
-    <div class="total" id="grandTotal">Mindösszesen: 0 Ft</div>
+window.addDevice = () => {
+    const id = deviceSelect.value;
+    if(!id) return;
+    currentProject.push({ id, room: roomInput.value || 'Nincs', qty: +qtyInput.value, status:'Tervezett' });
+    roomInput.value='';
+    render();
+};
 
-    <script define:vars={{ katalogus }}>
-        let currentProject = [];
+window.render = () => {
+    tableBody.innerHTML='';
+    let sum=0;
+    currentProject.forEach((i,idx)=>{
+        const info = katalogus[i.id] || {price:0,protocol:'Egyéb'};
+        sum += i.qty*info.price;
+        tableBody.innerHTML += `
+        <tr>
+            <td><span class="tag-room">${i.room}</span></td>
+            <td>${i.id}</td>
+            <td><span class="badge-protocol ${(info.protocol||'egyeb').toLowerCase()}">${info.protocol}</span></td>
+            <td>${i.qty}</td>
+            <td class="price">${(i.qty*info.price).toLocaleString()} Ft</td>
+            <td><span class="badge-status status-tervezett">${i.status}</span></td>
+            <td><button class="btn-del" onclick="remove(${idx})">✕</button></td>
+        </tr>`;
+    });
+    grandTotal.innerText = sum.toLocaleString()+' Ft';
+};
 
-        window.addDevice = () => {
-            const id = document.getElementById('deviceSelect').value;
-            const room = document.getElementById('roomInput').value || 'Nincs megadva';
-            const qty = parseInt(document.getElementById('qtyInput').value);
-            if (!id) return alert('Válassz eszközt!');
-            
-            const price = katalogus[id].price;
-            currentProject.push({ id, room, qty, price });
-            render();
-        };
+window.remove = i => { currentProject.splice(i,1); render(); };
 
-        window.render = () => {
-            const body = document.getElementById('tableBody');
-            body.innerHTML = '';
-            let total = 0;
-            currentProject.forEach((item, index) => {
-                const subtotal = item.price * item.qty;
-                total += subtotal;
-                body.innerHTML += `<tr>
-                    <td>${item.room}</td>
-                    <td>${item.id}</td>
-                    <td>${item.price.toLocaleString()} Ft</td>
-                    <td>${item.qty} db</td>
-                    <td>${subtotal.toLocaleString()} Ft</td>
-                    <td><button class="delete" onclick="remove(${index})">X</button></td>
-                </tr>`;
-            });
-            document.getElementById('grandTotal').innerText = `Mindösszesen: ${total.toLocaleString()} Ft`;
-        };
+window.saveProject = () => {
+    if(clientName.value) {
+        localStorage.setItem('proj_'+clientName.value, JSON.stringify(currentProject));
+        alert('Mentve!');
+    }
+};
 
-        window.remove = (index) => {
-            currentProject.splice(index, 1);
-            render();
-        };
+window.openLoadPopup = () => {
+    projectList.innerHTML='';
+    Object.keys(localStorage).filter(k=>k.startsWith('proj_')).forEach(k=>{
+        const name = k.replace('proj_','');
+        projectList.innerHTML += `<button class="btn-blue" style="width:100%;margin-bottom:6px" onclick="loadProjectByName('${name}')">${name}</button>`;
+    });
+    loadPopup.style.display='flex';
+};
 
-        window.saveProject = () => {
-            const name = document.getElementById('clientName').value;
-            if (!name) return alert('Adj meg egy nevet!');
-            localStorage.setItem('planner_' + name, JSON.stringify(currentProject));
-            alert('Projekt elmentve a böngészőbe!');
-        };
+window.closeLoadPopup = ()=> loadPopup.style.display='none';
 
-        window.loadProject = () => {
-            const name = document.getElementById('clientName').value;
-            const data = localStorage.getItem('planner_' + name);
-            if (data) {
-                currentProject = JSON.parse(data);
-                render();
-            } else {
-                alert('Nincs mentett projekt ezen a néven!');
-            }
-        };
-    </script>
+window.loadProjectByName = name => {
+    const data = localStorage.getItem('proj_'+name);
+    if(data){
+        currentProject = JSON.parse(data);
+        clientName.value=name;
+        render();
+        closeLoadPopup();
+    }
+};
+</script>
 </body>
 </html>
