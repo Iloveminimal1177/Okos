@@ -88,6 +88,54 @@ const katalogus = katalogusData || {};
 
         .price { color:#2ecc71; font-weight:bold; font-family:monospace; }
         #grandTotal { font-size:1.2rem; color:#2ecc71; }
+        
+        /* Popup stílusok */
+        .popup {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.6);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .popup-content {
+            background: #202020;
+            padding: 25px;
+            border-radius: 12px;
+            min-width: 400px;
+            max-width: 500px;
+        }
+        
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .popup-footer {
+            text-align: right;
+            margin-top: 20px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+        
+        .help-text {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+        }
     </style>
 </head>
 
@@ -98,6 +146,8 @@ const katalogus = katalogusData || {};
     <input type="text" id="clientName" placeholder="Ügyfél neve..." />
     <button class="btn-blue" onclick="saveProject()">💾 Mentés</button>
     <button class="btn-yellow" onclick="openLoadPopup()">📂 Betöltés</button>
+    <button class="btn-green" onclick="openSettingsPopup()">⚙️ Beállítások</button>
+    <button class="btn-green" onclick="exportToJSON()">📥 Export JSON</button>
 
     <div style="flex-grow:1"></div>
 
@@ -133,76 +183,621 @@ const katalogus = katalogusData || {};
 </table>
 
 <!-- LOAD POPUP -->
-<div id="loadPopup" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:999; align-items:center; justify-content:center;">
-    <div style="background:#202020; padding:20px; border-radius:12px; min-width:300px;">
-        <h3>📂 Mentett ügyfelek</h3>
+<div id="loadPopup" class="popup">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3 style="margin:0">📂 Mentett ügyfelek</h3>
+            <button class="btn-del" style="padding:5px 10px" onclick="closeLoadPopup()">✕</button>
+        </div>
         <div id="projectList"></div>
-        <div style="text-align:right; margin-top:15px;">
+        <div class="popup-footer">
             <button class="btn-del" onclick="closeLoadPopup()">Bezár</button>
+        </div>
+    </div>
+</div>
+
+<!-- SETTINGS POPUP -->
+<div id="settingsPopup" class="popup">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3 style="margin:0">⚙️ GitHub Beállítások</h3>
+            <button class="btn-del" style="padding:5px 10px" onclick="closeSettingsPopup()">✕</button>
+        </div>
+        
+        <div class="input-group">
+            <label for="githubToken">GitHub Personal Access Token:</label>
+            <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%" />
+            <div class="help-text">
+                <a href="https://github.com/settings/tokens" target="_blank" style="color:#2980b9; text-decoration:none">
+                    🔗 Token létrehozása itt
+                </a>
+                <br>Scope: <code>gist</code> (csak ezt pipáld be!)
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label for="gistId">Gist ID (opcionális):</label>
+            <input type="text" id="gistId" placeholder="xxxxxxxxxxxxxxxxxxxx" style="width:100%" />
+            <div class="help-text">
+                Ha már van mentő Gist-ed, add meg az ID-ját.<br>
+                Üresen hagyva új Gist jön létre automatikusan.
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label for="syncCode">Szinkronizálási kód:</label>
+            <input type="text" id="syncCode" readonly style="width:100%; background:#2a2a2a; color:#888; cursor:pointer" onclick="copySyncCode()" />
+            <div class="help-text">
+                Kattints a másoláshoz. Ezt a kódot bármelyik eszközön beírhatod a beállításokban.
+            </div>
+        </div>
+        
+        <div class="popup-footer">
+            <button class="btn-green" onclick="saveSettings()">💾 Beállítások mentése</button>
+            <button class="btn-del" onclick="closeSettingsPopup()">Mégse</button>
+        </div>
+    </div>
+</div>
+
+<!-- SYNC POPUP -->
+<div id="syncPopup" class="popup">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3 style="margin:0">🔄 Eszköz szinkronizálás</h3>
+            <button class="btn-del" style="padding:5px 10px" onclick="closeSyncPopup()">✕</button>
+        </div>
+        
+        <div class="input-group">
+            <label for="importSyncCode">Szinkronizálási kód:</label>
+            <textarea id="importSyncCode" placeholder="Illeszd be a másik eszközről másolt kódot..." style="width:100%; height:100px; font-family:monospace; background:#2a2a2a; color:#fff; border:1px solid #3d3d3d; padding:10px; border-radius:6px"></textarea>
+            <div class="help-text">
+                Más eszközön: Beállítások → Szinkronizálási kód → Másolás<br>
+                Itt: Illeszd be → Importálás
+            </div>
+        </div>
+        
+        <div class="popup-footer">
+            <button class="btn-green" onclick="importSyncCode()">📥 Importálás</button>
+            <button class="btn-del" onclick="closeSyncPopup()">Mégse</button>
         </div>
     </div>
 </div>
 
 <script define:vars={{ katalogus }}>
 let currentProject = [];
+let GITHUB_TOKEN = '';
+let GIST_ID = '';
 
+// ============ INICIALIZÁCIÓ ============
+function initApp() {
+    // Token betöltése localStorage-ből
+    GITHUB_TOKEN = localStorage.getItem('okos_github_token') || '';
+    GIST_ID = localStorage.getItem('okos_gist_id') || '';
+    
+    // Sync code generálása
+    updateSyncCode();
+    
+    // Ellenőrizzük, hogy van-e token
+    checkGitHubToken();
+    
+    // Alapértelmezett render
+    render();
+}
+
+// ============ TOKEN ELLENŐRZÉS ============
+function checkGitHubToken() {
+    if (!GITHUB_TOKEN || GITHUB_TOKEN.length < 20) {
+        console.log('Nincs GitHub token beállítva. Az alkalmazás csak helyileg fog működni.');
+        
+        // Csak akkor ajánljuk fel a beállítást, ha még nem volt
+        const hasSeenWarning = localStorage.getItem('okos_has_seen_token_warning');
+        if (!hasSeenWarning) {
+            setTimeout(() => {
+                const setup = confirm(
+                    'Üdvözöllek az Okosotthon Tervezőben!\n\n' +
+                    'A GitHub Gist-be mentéshez token szükséges.\n' +
+                    'Szeretnél most beállítani?\n\n' +
+                    '✅ Igen: Token beállítása\n' +
+                    '❌ Nem: Csak helyi mentés (böngészőben marad)'
+                );
+                
+                if (setup) {
+                    openSettingsPopup();
+                } else {
+                    localStorage.setItem('okos_has_seen_token_warning', 'true');
+                }
+            }, 1500);
+        }
+    }
+}
+
+// ============ ALAP FUNKCIÓK ============
 window.addDevice = () => {
     const id = deviceSelect.value;
     if(!id) return;
-    currentProject.push({ id, room: roomInput.value || 'Nincs', qty: +qtyInput.value, status:'Tervezett' });
-    roomInput.value='';
+    currentProject.push({ 
+        id, 
+        room: roomInput.value || 'Nincs', 
+        qty: +qtyInput.value, 
+        status:'Tervezett' 
+    });
+    roomInput.value = '';
     render();
 };
 
 window.render = () => {
-    tableBody.innerHTML='';
-    let sum=0;
-    currentProject.forEach((i,idx)=>{
-        const info = katalogus[i.id] || {price:0,protocol:'Egyéb'};
-        sum += i.qty*info.price;
+    tableBody.innerHTML = '';
+    let sum = 0;
+    
+    currentProject.forEach((i, idx) => {
+        const info = katalogus[i.id] || {price: 0, protocol: 'Egyéb'};
+        sum += i.qty * info.price;
+        
         tableBody.innerHTML += `
         <tr>
             <td><span class="tag-room">${i.room}</span></td>
             <td>${i.id}</td>
             <td><span class="badge-protocol ${(info.protocol||'egyeb').toLowerCase()}">${info.protocol}</span></td>
             <td>${i.qty}</td>
-            <td class="price">${(i.qty*info.price).toLocaleString()} Ft</td>
+            <td class="price">${(i.qty * info.price).toLocaleString()} Ft</td>
             <td><span class="badge-status status-tervezett">${i.status}</span></td>
             <td><button class="btn-del" onclick="remove(${idx})">✕</button></td>
         </tr>`;
     });
-    grandTotal.innerText = sum.toLocaleString()+' Ft';
+    
+    grandTotal.innerText = sum.toLocaleString() + ' Ft';
 };
 
-window.remove = i => { currentProject.splice(i,1); render(); };
+window.remove = i => { 
+    currentProject.splice(i, 1); 
+    render(); 
+};
 
-window.saveProject = () => {
-    if(clientName.value) {
-        localStorage.setItem('proj_'+clientName.value, JSON.stringify(currentProject));
-        alert('Mentve!');
+// ============ MENTÉS (GitHub + Local) ============
+window.saveProject = async () => {
+    const name = clientName.value.trim();
+    if(!name) {
+        alert('Kérjük adja meg az ügyfél nevét!');
+        return;
+    }
+
+    try {
+        // 1. Mindig mentjük localStorage-ba
+        localStorage.setItem('okos_proj_' + name, JSON.stringify({
+            clientName: name,
+            project: currentProject,
+            savedAt: new Date().toISOString(),
+            version: '1.0'
+        }));
+
+        // 2. GitHub mentés (ha van token)
+        if (GITHUB_TOKEN && GITHUB_TOKEN.length > 20) {
+            await saveToGitHubGist(name);
+            alert('✅ Projekt mentve!\n\n• Helyi tárolóba\n• GitHub Gist-be');
+        } else {
+            // Csak helyi mentés
+            alert('✅ Projekt mentve helyi tárolóba!\n\nGitHub token nincs beállítva a felhős mentéshez.');
+        }
+    } catch(error) {
+        console.error('Mentési hiba:', error);
+        alert('⚠️ Hiba történt: ' + error.message);
     }
 };
 
-window.openLoadPopup = () => {
-    projectList.innerHTML='';
-    Object.keys(localStorage).filter(k=>k.startsWith('proj_')).forEach(k=>{
-        const name = k.replace('proj_','');
-        projectList.innerHTML += `<button class="btn-blue" style="width:100%;margin-bottom:6px" onclick="loadProjectByName('${name}')">${name}</button>`;
+// ============ GITHUB GIST MENTÉS ============
+async function saveToGitHubGist(projectName) {
+    const gistData = {
+        description: `Okosotthon projekt: ${projectName} - ${new Date().toLocaleDateString('hu-HU')}`,
+        public: false,
+        files: {
+            [`${projectName}.json`]: {
+                content: JSON.stringify({
+                    clientName: projectName,
+                    project: currentProject,
+                    savedAt: new Date().toISOString(),
+                    version: '1.0'
+                }, null, 2)
+            }
+        }
+    };
+
+    let url = 'https://api.github.com/gists';
+    let method = 'POST';
+    
+    // Ha van GIST_ID, akkor update
+    if (GIST_ID) {
+        url = `https://api.github.com/gists/${GIST_ID}`;
+        method = 'PATCH';
+        
+        try {
+            // Lekérjük a létező Gist-et
+            const existingResponse = await fetch(url, {
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (existingResponse.ok) {
+                const existingGist = await existingResponse.json();
+                // Megtartjuk a régi fájlokat is
+                gistData.files = {
+                    ...existingGist.files,
+                    ...gistData.files
+                };
+            }
+        } catch(e) {
+            console.log('Új fájl létrehozása a Gist-ben');
+        }
+    }
+
+    const response = await fetch(url, {
+        method: method,
+        headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify(gistData)
     });
-    loadPopup.style.display='flex';
+
+    const result = await response.json();
+    
+    if(response.ok) {
+        // Mentjük az új GIST_ID-t ha új Gist jött létre
+        if (!GIST_ID && result.id) {
+            GIST_ID = result.id;
+            localStorage.setItem('okos_gist_id', GIST_ID);
+            updateSyncCode(); // Frissítjük a sync kódot
+        }
+        
+        console.log('GitHub mentés sikeres:', result.html_url);
+        return true;
+    } else {
+        throw new Error(result.message || 'GitHub API hiba');
+    }
+}
+
+// ============ BETÖLTÉS ============
+window.openLoadPopup = async () => {
+    try {
+        projectList.innerHTML = '<p style="color:#888;text-align:center">Betöltés...</p>';
+        loadPopup.style.display = 'flex';
+        
+        let projects = [];
+        
+        // 1. Helyi projektek
+        Object.keys(localStorage).forEach(k => {
+            if(k.startsWith('okos_proj_')) {
+                projects.push(k.replace('okos_proj_', ''));
+            }
+        });
+        
+        // 2. GitHub projektek (ha van token és Gist ID)
+        if (GITHUB_TOKEN && GITHUB_TOKEN.length > 20 && GIST_ID) {
+            try {
+                const githubProjects = await getGitHubProjects();
+                githubProjects.forEach(project => {
+                    if (!projects.includes(project)) {
+                        projects.push(project);
+                    }
+                });
+            } catch(githubError) {
+                console.warn('GitHub betöltési hiba:', githubError);
+            }
+        }
+        
+        // Lista megjelenítése
+        projectList.innerHTML = '';
+        
+        if(projects.length === 0) {
+            projectList.innerHTML = '<p style="color:#888;text-align:center">Nincs mentett projekt</p>';
+        } else {
+            projects.forEach(name => {
+                projectList.innerHTML += `
+                    <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center">
+                        <button class="btn-blue" style="flex-grow:1" onclick="loadProject('${name}')">${name}</button>
+                        <button class="btn-del" onclick="deleteProject('${name}')">Törlés</button>
+                    </div>`;
+            });
+        }
+        
+    } catch(error) {
+        alert('Hiba a projektek betöltése során');
+        console.error(error);
+    }
 };
 
-window.closeLoadPopup = ()=> loadPopup.style.display='none';
+async function getGitHubProjects() {
+    const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+        headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error('GitHub betöltés sikertelen');
+    }
+    
+    const gist = await response.json();
+    const projects = [];
+    
+    if (gist.files) {
+        Object.keys(gist.files).forEach(fileName => {
+            if (fileName.endsWith('.json')) {
+                projects.push(fileName.replace('.json', ''));
+            }
+        });
+    }
+    
+    return projects;
+}
 
-window.loadProjectByName = name => {
-    const data = localStorage.getItem('proj_'+name);
-    if(data){
-        currentProject = JSON.parse(data);
-        clientName.value=name;
+window.closeLoadPopup = () => loadPopup.style.display = 'none';
+
+window.loadProject = async (name) => {
+    let projectData = null;
+    
+    // Először helyi tárolóból
+    const localData = localStorage.getItem('okos_proj_' + name);
+    if (localData) {
+        projectData = JSON.parse(localData);
+    }
+    
+    // Ha nincs helyben és van GitHub token, akkor GitHub-ról
+    if (!projectData && GITHUB_TOKEN && GITHUB_TOKEN.length > 20 && GIST_ID) {
+        try {
+            const githubData = await loadFromGitHub(name);
+            if (githubData) {
+                projectData = githubData;
+                // Elmentjük helyire is a jövőbeli gyors eléréshez
+                localStorage.setItem('okos_proj_' + name, JSON.stringify(projectData));
+            }
+        } catch(error) {
+            console.log('GitHub betöltés sikertelen:', error);
+        }
+    }
+    
+    if (projectData) {
+        currentProject = projectData.project || projectData;
+        clientName.value = projectData.clientName || name;
         render();
         closeLoadPopup();
+        alert(`Projekt betöltve: ${name}`);
+    } else {
+        alert(`Projekt nem található: ${name}`);
     }
 };
+
+async function loadFromGitHub(name) {
+    const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+        headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error('GitHub betöltés sikertelen');
+    }
+    
+    const gist = await response.json();
+    const fileName = `${name}.json`;
+    
+    if (gist.files && gist.files[fileName]) {
+        const content = gist.files[fileName].content;
+        return JSON.parse(content);
+    }
+    
+    return null;
+}
+
+// ============ TÖRLÉS ============
+window.deleteProject = async (name) => {
+    if(!confirm(`Biztosan törölni szeretné a(z) "${name}" projektet?\n\nEz a törlés végleges!`)) {
+        return;
+    }
+
+    // 1. Helyi törlés
+    localStorage.removeItem('okos_proj_' + name);
+    
+    // 2. GitHub törlés (ha van token és Gist ID)
+    if (GITHUB_TOKEN && GITHUB_TOKEN.length > 20 && GIST_ID) {
+        try {
+            await deleteFromGitHub(name);
+        } catch(error) {
+            console.log('GitHub törlés sikertelen:', error);
+        }
+    }
+    
+    alert('Projekt törölve!');
+    openLoadPopup(); // Frissíti a listát
+};
+
+async function deleteFromGitHub(name) {
+    const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+        headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error('Gist betöltés sikertelen');
+    }
+    
+    const gist = await response.json();
+    const fileName = `${name}.json`;
+    
+    if (gist.files && gist.files[fileName]) {
+        // Töröljük a fájlt a Gist-ből
+        gist.files[fileName] = null;
+        
+        // Frissítjük a Gist-et
+        await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                files: gist.files
+            })
+        });
+    }
+}
+
+// ============ BEÁLLÍTÁSOK ============
+window.openSettingsPopup = () => {
+    githubToken.value = GITHUB_TOKEN;
+    gistId.value = GIST_ID;
+    updateSyncCode();
+    settingsPopup.style.display = 'flex';
+};
+
+window.closeSettingsPopup = () => settingsPopup.style.display = 'none';
+
+window.saveSettings = () => {
+    const newToken = githubToken.value.trim();
+    const newGistId = gistId.value.trim();
+    
+    // Token validáció
+    if (newToken && newToken.length < 20) {
+        alert('Érvénytelen token! A tokennek legalább 20 karakter hosszúnak kell lennie.');
+        return;
+    }
+    
+    // Token tesztelése (ha új token van)
+    if (newToken && newToken !== GITHUB_TOKEN) {
+        if (!confirm('Új tokent állítasz be. Szeretnéd tesztelni a tokent?')) {
+            saveSettingsToStorage(newToken, newGistId);
+            return;
+        }
+        
+        testGitHubToken(newToken).then(isValid => {
+            if (isValid) {
+                saveSettingsToStorage(newToken, newGistId);
+                alert('✅ Token érvényes! Beállítások mentve.');
+            } else {
+                alert('❌ Token érvénytelen! Kérlek ellenőrizd a tokent.');
+            }
+        }).catch(error => {
+            alert('❌ Token tesztelés sikertelen: ' + error.message);
+        });
+    } else {
+        saveSettingsToStorage(newToken, newGistId);
+        alert('Beállítások mentve!');
+    }
+};
+
+function saveSettingsToStorage(token, gistId) {
+    GITHUB_TOKEN = token;
+    GIST_ID = gistId;
+    
+    localStorage.setItem('okos_github_token', token);
+    localStorage.setItem('okos_gist_id', gistId);
+    
+    updateSyncCode();
+    closeSettingsPopup();
+}
+
+async function testGitHubToken(token) {
+    const response = await fetch('https://api.github.com/user', {
+        headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    });
+    
+    return response.ok;
+}
+
+// ============ SZINKRONIZÁCIÓS KÓD ============
+function updateSyncCode() {
+    // Létrehozunk egy sync kódot a beállításokhoz
+    const syncData = {
+        token: GITHUB_TOKEN,
+        gistId: GIST_ID,
+        version: '1.0',
+        timestamp: new Date().toISOString()
+    };
+    
+    // Base64 kódolás
+    const syncCode = btoa(JSON.stringify(syncData));
+    syncCode.value = syncCode;
+}
+
+window.copySyncCode = () => {
+    syncCode.select();
+    document.execCommand('copy');
+    alert('✅ Szinkronizálási kód másolva!\n\nMás eszközön: Beállítások → Szinkronizálási kód mező → Illeszd be → Importálás');
+};
+
+window.openSyncPopup = () => {
+    syncPopup.style.display = 'flex';
+};
+
+window.closeSyncPopup = () => syncPopup.style.display = 'none';
+
+window.importSyncCode = () => {
+    const code = importSyncCode.value.trim();
+    if (!code) {
+        alert('Kérlek illess be egy szinkronizálási kódot!');
+        return;
+    }
+    
+    try {
+        // Base64 dekódolás
+        const decoded = atob(code);
+        const syncData = JSON.parse(decoded);
+        
+        if (!syncData.token || syncData.token.length < 20) {
+            throw new Error('Érvénytelen token a kódban');
+        }
+        
+        // Beállítások mentése
+        GITHUB_TOKEN = syncData.token;
+        GIST_ID = syncData.gistId || '';
+        
+        localStorage.setItem('okos_github_token', GITHUB_TOKEN);
+        localStorage.setItem('okos_gist_id', GIST_ID);
+        
+        updateSyncCode();
+        closeSyncPopup();
+        
+        alert('✅ Eszköz szinkronizálva!\n\nGitHub token és Gist ID sikeresen importálva.');
+    } catch(error) {
+        alert('❌ Hiba a szinkronizálási kód feldolgozásakor: ' + error.message);
+    }
+};
+
+// ============ JSON EXPORT ============
+window.exportToJSON = () => {
+    const name = clientName.value.trim() || 'unnamed_project';
+    
+    const data = {
+        clientName: name,
+        project: currentProject,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `okosotthon-${name}-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert(`Projekt exportálva: ${a.download}\n\nMentsd el a fájlt, és később visszatöltheted.`);
+};
+
+// ============ ALKALMAZÁS INDÍTÁSA ============
+initApp();
 </script>
 </body>
 </html>
