@@ -176,29 +176,94 @@ window.render = () => {
 
 window.remove = i => { currentProject.splice(i,1); render(); };
 
-window.saveProject = () => {
+window.saveProject = async () => {
     if(clientName.value) {
+        // Lokálisan mentés
         localStorage.setItem('proj_'+clientName.value, JSON.stringify(currentProject));
-        alert('Mentve!');
+        
+        // Szerver oldali mentés JSON fájlba
+        try {
+            const response = await fetch('/api/projects.json', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'save',
+                    name: clientName.value,
+                    data: currentProject
+                })
+            });
+            const result = await response.json();
+            if(result.success) {
+                alert('Projekt mentve! (Lokálisan és szerverről is)');
+            } else {
+                alert('Hiba: ' + result.message);
+            }
+        } catch(e) {
+            console.error('Szerver hiba:', e);
+            alert('Szerver hiba, de lokálisan mentve!');
+        }
     }
 };
 
-window.openLoadPopup = () => {
+window.openLoadPopup = async () => {
     projectList.innerHTML='';
-    Object.keys(localStorage).filter(k=>k.startsWith('proj_')).forEach(k=>{
-        const name = k.replace('proj_','');
-        projectList.innerHTML += `<button class="btn-blue" style="width:100%;margin-bottom:6px" onclick="loadProjectByName('${name}')">${name}</button>`;
-    });
+    
+    // Szerverről betöltés
+    try {
+        const response = await fetch('/api/projects.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'list' })
+        });
+        const result = await response.json();
+        if(result.success && result.projects.length > 0) {
+            result.projects.forEach(name => {
+                projectList.innerHTML += `<button class="btn-blue" style="width:100%;margin-bottom:6px" onclick="loadProjectByName('${name}')">${name}</button>`;
+            });
+        }
+    } catch(e) {
+        console.error('Szerver hiba:', e);
+    }
+    
+    // Lokális fallback
+    const localProjects = Object.keys(localStorage).filter(k=>k.startsWith('proj_')).map(k=>k.replace('proj_',''));
+    if(localProjects.length > 0 && projectList.innerHTML === '') {
+        projectList.innerHTML += '<p style="color:#888; margin-bottom:10px;">Csak lokális mentések:</p>';
+        localProjects.forEach(name=>{
+            projectList.innerHTML += `<button class="btn-blue" style="width:100%;margin-bottom:6px" onclick="loadProjectByName('${name}')">${name}</button>`;
+        });
+    }
+    
     loadPopup.style.display='flex';
 };
 
 window.closeLoadPopup = ()=> loadPopup.style.display='none';
 
-window.loadProjectByName = name => {
+window.loadProjectByName = async name => {
+    // Szerverről próbáld betölteni először
+    try {
+        const response = await fetch('/api/projects.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'load', name: name })
+        });
+        const result = await response.json();
+        if(result.success) {
+            currentProject = result.data;
+            clientName.value = name;
+            render();
+            closeLoadPopup();
+            return;
+        }
+    } catch(e) {
+        console.error('Szerver hiba:', e);
+    }
+    
+    // Lokális fallback
     const data = localStorage.getItem('proj_'+name);
     if(data){
         currentProject = JSON.parse(data);
-        clientName.value=name;
+        clientName.value = name;
         render();
         closeLoadPopup();
     }
